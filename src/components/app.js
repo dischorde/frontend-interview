@@ -4,31 +4,47 @@ import '../assets/App.css';
 var RTM = require("satori-sdk-js");
 
 class App extends Component {
-  componentDidMount() {
+  constructor(props) {
+    super(props);
+    this.state = {
+      rtm: this.setUpSatori()
+    };
+    this.setUpSatori = this.setUpSatori.bind(this);
+  }
+
+  setUpSatori() {
     const endpoint = "wss://open-data.api.satori.com";
     const appKey = "6DfAFA11EBdd319d8D4FAecBaE3e8B1D";
-    const channel = "transportation";
-
 
     const rtm = new RTM(endpoint, appKey);
-    rtm.on("enter-connected", () => {
+    return rtm;
+  }
+
+  componentDidMount() {
+    const channel = "transportation";
+    this.state.rtm.on("enter-connected", () => {
       console.log("Connected to RTM!");
     });
 
-    const subscription = rtm.subscribe(channel, RTM.SubscriptionMode.SIMPLE);
+    const subscription = this.state.rtm.subscribe(channel, RTM.SubscriptionMode.SIMPLE);
     subscription.on('rtm/subscription/data', (pdu) => {
       pdu.body.messages.forEach( msg => {
         this.props.receiveMessage(msg);
       });
     });
 
-    rtm.start();
+    this.state.rtm.start();
   }
 
   render() {
-    const messageIds = Object.keys(this.props.messages);
-    console.log(messageIds);
-    let messageIdLis = messageIds.map((id) => <li key={id}>{id}</li>);
+    const { messages } = this.props;
+    let entityIds = Object.keys(messages).map((id, idx) => {
+      return <li key={idx}>{id}</li>;
+    });
+
+    if (entityIds.length > 1000 ) {
+      this.state.rtm.stop();
+    }
 
     return (
       <div className="App">
@@ -36,9 +52,9 @@ class App extends Component {
           <img src={logo} className="App-logo" alt="logo" />
           <h2>Frontend Coding Exercise</h2>
         </div>
-          <ul>
-            { messageIdLis }
-          </ul>
+        <ul>
+          { entityIds }
+        </ul>
       </div>
     );
   }
